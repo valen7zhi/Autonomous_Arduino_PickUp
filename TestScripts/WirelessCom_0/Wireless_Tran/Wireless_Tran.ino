@@ -1,80 +1,108 @@
+/*
+  BN: Arduino/Genuino Uno
+  VID: 0x2341
+  PID: 0x0043
+  SN: 75735323030351804122
+  Autonomous Arduino Pick-Up Truck Remote Controller
+  @Author: Zhibo Wang
+  ISE511/AME504 Mechatronic Systems Engineering '19
+*/
+#include <Servo.h>
 #include <SPI.h>
-
 #include <nRF24L01.h>
 #include <printf.h>
 #include <RF24.h>
 #include <RF24_config.h>
 
-#include <Servo.h>
 
-RF24 radio(9,10); // CE, CSN
+RF24 radio(9, 10); // CE, CSN Pins
 
-const byte address[6] = {"00001","00002"};
+// #define XJOY_PIN A1 //X axis reading from joystick will go into analog pin A1
 
-int servoPin = 6;
-int xjoyPin = A1;
-int switchPin = 2;
+const byte addresses[][6] = {"00001", "00002"}; // read 00001, write 00002 for transmitter
+
+const int servoPin = 6;
+const int ledPin = 8;
+
+const int xjoyPin = A0;
+const int yjoyPin = A1;
+
+const int switchPin = 2;
 int switchState = 0;
-int ledPin = 5;
 bool swLogic = false;
 
-// #define XJOY_PIN A1       //X axis reading from joystick will go into analog pin A1
-Servo myservo;
+int dataArray [5];
+/*
+  [0] -> xjoy
+  [1] -> yjoy
+  [2] -> joyswitch
+  [3:5] -> extra array space for further dev
+*/
+
+Servo servoSteering;
 
 void setup()
 {
-    Serial.begin(9600);
+  Serial.begin(9600);
 
-    myservo.attach(servoPin);
-    myservo.write(0);
+  servoSteering.attach(servoPin);
+  servoSteering.write(0);
 
-    pinMode(ledPin, OUTPUT);
-    pinMode(switchPin, INPUT);
-    digitalWrite(switchPin, HIGH);
+  pinMode(ledPin, OUTPUT);
+  pinMode(switchPin, INPUT);
+  digitalWrite(switchPin, HIGH);
 
-    radio.begin();
-    radio.openWritingPipe(address);
-    radio.setPALevel(RF24_PA_MIN);
-    radio.stopListening();
+  radio.begin();
+  radio.openWritingPipe(addresses[1]); // 00002
+  radio.openReadingPipe(1, addresses[0]); // 00001
+  radio.setPALevel(RF24_PA_MIN); // power saving signal strength
+  //    radio.stopListening();
+
 }
 
 void loop()
 {
-    delay(200);
-    int joystickXVal = analogRead(xjoyPin); //read joystick input on pin A1
-    joystickXVal = map(joystickXVal, 0, 1023, 0, 180);
-//    Serial.print(joystickXVal);               //print the value from A1
-//    Serial.println(" = input from joystick"); //print "=input from joystick" next to the value
-    // Serial.print((joystickXVal + 520) / 10);  //print a from A1 calculated, scaled value
-//    Serial.print(joystickXVal);
-//    Serial.println(" = output to servo"); //print "=output to servo" next to the value
-//    Serial.println();
-    // myservo.write((joystickXVal + 520) / 10); //write the calculated value to the servo
-    myservo.write(joystickXVal);
+  delay(150); // sweet spot time for the joystick switch
+  radio.stopListening();
 
-    switchState = digitalRead(switchPin);
-    Serial.print(switchState);
-    Serial.println(" = switchState");
+  int joystickXVal = analogRead(xjoyPin); //read joystick xaxis
+  joystickXVal = map(joystickXVal, 0, 1023, 0, 180);
 
-    if (switchState == 0 && swLogic == false)
-    {
-        swLogic = true;
-    }
-    else if (switchState == 0 && swLogic == true)
-    {
-        swLogic = false;
-    }
+  int joystickYVal = analogRead(yjoyPin); //read joystick yaxis
+  joystickYVal = map(joystickYVal, 0, 1023, -255, 255);
 
-    if (swLogic == true)
-    {
-        digitalWrite(ledPin, HIGH);
-    }
-    else if (swLogic == false)
-    {
-        digitalWrite(ledPin, LOW);
-    }
+  dataArray[0] = joystickXVal;
+  dataArray[1] = joystickYVal;
 
-    const char text[] = "Hello World!";
-    radio.write(&text, sizeof(text));
-    delay(1000);
+  switchState = digitalRead(switchPin);
+
+  /*
+    switch state for manual/autonomous mode
+  */
+  if (switchState == 0 && swLogic == false)
+  {
+    swLogic = true;
+    digitalWrite(ledPin, HIGH);
+    dataArray[2] = 1;
+  }
+  else if (switchState == 0 && swLogic == true)
+  {
+    swLogic = false;
+    digitalWrite(ledPin, LOW);
+    dataArray[2] = 0;
+  }
+
+  Serial.println("-------------");
+  Serial.print("xAxis: ");
+  Serial.println(joystickXVal);
+  Serial.print("yAxis: ");
+  Serial.println(joystickYVal);
+  Serial.println();
+
+
+  radio.write(&dataArray, sizeof(dataArray));
+
+  //  const char text[] = "Hello World!";
+  //  radio.write(&text, sizeof(text));
+  //  delay(1000);
 }
