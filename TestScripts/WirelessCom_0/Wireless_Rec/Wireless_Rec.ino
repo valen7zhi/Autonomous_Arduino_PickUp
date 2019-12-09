@@ -24,6 +24,7 @@ const byte addresses[][6] = {"00001", "00002"}; // read 00002, write 00001 for t
 
 const int servoPin = 2;
 const int ledPin = 8;
+const int statusledPin = A3;
 
 int dataArray [5]; //data sent from transmitter
 /*
@@ -207,6 +208,9 @@ void setup()
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
+  pinMode(statusledPin, OUTPUT);
+  digitalWrite(statusledPin, LOW);
+
   pinMode(in1Pin, OUTPUT);
   pinMode(in2Pin, OUTPUT);
   pinMode(enablePin, OUTPUT);
@@ -233,8 +237,10 @@ void loop()
   //    radio.read(&text, sizeof(text));
   //    Serial.println(text);
   //  }
-
-  delay(20);
+  digitalWrite(statusledPin, LOW);
+  delay(35);
+  digitalWrite(statusledPin, HIGH);
+  
   radio.startListening();
 
   //  if (radio.available())
@@ -272,10 +278,11 @@ void loop()
     //      Serial.print(distLeftCorner);
     //      Serial.println("cm");
 
+    
   }
+  
 
   //  }
-
 
 }
 

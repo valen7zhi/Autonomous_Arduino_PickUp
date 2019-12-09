@@ -23,6 +23,7 @@ const byte addresses[][6] = {"00001", "00002"}; // read 00001, write 00002 for t
 
 const int servoPin = 6;
 const int ledPin = 8;
+const int statusledPin = 3;
 
 const int xjoyPin = A0;
 const int yjoyPin = A1;
@@ -53,13 +54,14 @@ const int CLK = 5;
 LedControl ledMatrix = LedControl(DIN, CLK, CS, 0);
 byte A[8] = {0x00, 0x18, 0x24, 0x42, 0x7e, 0x42, 0x42, 0x42};
 byte M[8] = {0x00, 0x42, 0x66, 0x5A, 0x42, 0x42, 0x42, 0x42};
-byte smileyface[8] = {0x3C,0x42,0xA5,0x81,0xA5,0x99,0x42,0x3C};
+byte smileyface[8] = {0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C};
 
 Servo servoSteering;
 
 void setup()
 {
   Serial.begin(9600);
+//  pinMode(LED_BUILTIN, OUTPUT); // built-in led for operating indication
 
   servoSteering.attach(servoPin);
   servoSteering.write(0);
@@ -67,6 +69,9 @@ void setup()
   pinMode(ledPin, OUTPUT);
   pinMode(switchPin, INPUT);
   digitalWrite(switchPin, HIGH);
+
+  pinMode(statusledPin, OUTPUT);
+  digitalWrite(statusledPin, LOW);
 
   radio.begin();
   radio.openWritingPipe(addresses[1]); // 00002
@@ -84,12 +89,15 @@ void setup()
   printByte(smileyface);
   delay(3000);
   printByte(M);
-
+  
 }
 
 void loop()
 {
+  digitalWrite(statusledPin, LOW);
   delay(150); // sweet spot time for the joystick switch
+  digitalWrite(statusledPin, HIGH);
+  
   radio.stopListening();
 
   int joystickXVal = analogRead(xjoyPin); //read joystick xaxis
@@ -132,7 +140,8 @@ void loop()
   Serial.println(joystickYVal);
 
   radio.write(&dataArray, sizeof(dataArray));
-
+  
+  
   //  delay(20);
   //  radio.startListening();
   //  if (radio.available())
@@ -152,8 +161,8 @@ void loop()
 }
 
 /*
- LED Matrix red 8x8 64 Led MAX7219 print function
- */
+  LED Matrix red 8x8 64 Led MAX7219 print function
+*/
 void printByte(byte character [])
 {
   int i = 0;
